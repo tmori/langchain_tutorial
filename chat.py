@@ -7,6 +7,8 @@ embedding_model='text-embedding-ada-002'
 page_chunk_size = 256
 max_token_num = 2048
 conversation_window_size = 3
+conversation_token_num = 512
+conversation_history_type = "token" # token or window
 
 if len(sys.argv) != 2:
     print("ERROR: " + sys.argv[0] + " <new|load>")
@@ -22,7 +24,7 @@ from langchain.chat_models import ChatOpenAI
 from langchain.chains import ConversationalRetrievalChain
 from langchain.document_loaders import PyPDFLoader
 from langchain.text_splitter import CharacterTextSplitter
-from langchain.memory import ConversationBufferMemory, ConversationBufferWindowMemory
+from langchain.memory import ConversationBufferWindowMemory, ConversationTokenBufferMemory
 
 def create_db(doc_dir, db_dir, embedding_model, chunk_size, token_num):
     pdf_files = [ file for file in os.listdir(doc_dir) if file.endswith(".pdf")]
@@ -51,7 +53,7 @@ def create_db(doc_dir, db_dir, embedding_model, chunk_size, token_num):
     vectorstore.persist()
 
 
-def load_db(db_dir, llm_name, embedding_model, token_num, window_num):
+def load_db(db_dir, llm_name, embedding_model, token_num, history_type, num):
     # LangChain における LLM のセットアップ
     print("LangChain における LLM のセットアップ")
     openai.api_key = os.getenv("OPENAI_API_KEY")
@@ -63,7 +65,10 @@ def load_db(db_dir, llm_name, embedding_model, token_num, window_num):
     embeddings = OpenAIEmbeddings(deployment=embedding_model)
     #embeddings = OpenAIEmbeddings()
     vectorstore = Chroma(persist_directory=db_dir, embedding_function=embeddings)
-    memory = ConversationBufferWindowMemory(k=window_num, memory_key="chat_history", return_messages=True)
+    if (history_type == "window"):
+        memory = ConversationBufferWindowMemory(k=num, memory_key="chat_history", return_messages=True)
+    else:
+        memory = ConversationTokenBufferMemory(llm=llm, max_token_limit=num, memory_key="chat_history", return_messages=True)
     pdf_qa = ConversationalRetrievalChain.from_llm(
         llm, 
         vectorstore.as_retriever(), 
@@ -85,7 +90,10 @@ if mode == "new":
     pdf_qa = create_db(doc_dir, db_dir, embedding_model, page_chunk_size, max_token_num)
     sys.exit(0)
 else:
-    pdf_qa = load_db(db_dir, llm_name, embedding_model, max_token_num, conversation_window_size)
+    if (conversation_history_type == "window"):
+        pdf_qa = load_db(db_dir, llm_name, embedding_model, max_token_num, conversation_history_type, conversation_window_size)
+    else:
+        pdf_qa = load_db(db_dir, llm_name, embedding_model, max_token_num, conversation_history_type, conversation_token_num)
     do_chat(pdf_qa)
     sys.exit(0)
 
