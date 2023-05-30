@@ -4,7 +4,7 @@ doc_dir='./documents'
 db_dir='DB'
 llm_name="gpt-3.5-turbo"
 embedding_model='text-embedding-ada-002'
-page_chunk_size = 1024
+page_chunk_size = 256
 max_token_num = 2048
 
 if len(sys.argv) != 2:
@@ -22,7 +22,7 @@ from langchain.chains import ConversationalRetrievalChain
 from langchain.document_loaders import PyPDFLoader
 from langchain.text_splitter import CharacterTextSplitter
 
-def create_db(doc_dir, db_dir, llm_name, embedding_model, chunk_size, token_num):
+def create_db(doc_dir, db_dir, embedding_model, chunk_size, token_num):
     pdf_files = [ file for file in os.listdir(doc_dir) if file.endswith(".pdf")]
 
     pages = []
@@ -41,11 +41,6 @@ def create_db(doc_dir, db_dir, llm_name, embedding_model, chunk_size, token_num)
         # 連結
         pages = pages + chanked_pages
 
-    # LangChain における LLM のセットアップ
-    print("LangChain における LLM のセットアップ")
-    openai.api_key = os.getenv("OPENAI_API_KEY")
-    llm = ChatOpenAI(temperature=0, model_name=llm_name, max_tokens=token_num)  
-
     # 分割したテキストの情報をベクターストアに格納する
     print("分割したテキストの情報をベクターストアに格納する")
     embeddings = OpenAIEmbeddings(deployment=embedding_model)
@@ -53,9 +48,6 @@ def create_db(doc_dir, db_dir, llm_name, embedding_model, chunk_size, token_num)
     vectorstore = Chroma.from_documents(pages, embedding=embeddings, persist_directory=db_dir)
     vectorstore.persist()
 
-    # PDF ドキュメントへ自然言語で問い合わせる
-    pdf_qa = ConversationalRetrievalChain.from_llm(llm, vectorstore.as_retriever(), return_source_documents=True)
-    return pdf_qa
 
 def load_db(db_dir, llm_name, embedding_model, token_num):
     # LangChain における LLM のセットアップ
@@ -81,7 +73,7 @@ def do_chat(pdf_qa):
 
 
 if mode == "new":
-    pdf_qa = create_db(doc_dir, db_dir, llm_name, embedding_model, page_chunk_size, max_token_num)
+    pdf_qa = create_db(doc_dir, db_dir, embedding_model, page_chunk_size, max_token_num)
     sys.exit(0)
 else:
     pdf_qa = load_db(db_dir, llm_name, embedding_model, max_token_num)
