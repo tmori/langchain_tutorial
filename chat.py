@@ -6,6 +6,7 @@ llm_name="gpt-3.5-turbo"
 embedding_model='text-embedding-ada-002'
 page_chunk_size = 256
 max_token_num = 2048
+conversation_window_size = 3
 
 if len(sys.argv) != 2:
     print("ERROR: " + sys.argv[0] + " <new|load>")
@@ -21,6 +22,7 @@ from langchain.chat_models import ChatOpenAI
 from langchain.chains import ConversationalRetrievalChain
 from langchain.document_loaders import PyPDFLoader
 from langchain.text_splitter import CharacterTextSplitter
+from langchain.memory import ConversationBufferMemory, ConversationBufferWindowMemory
 
 def create_db(doc_dir, db_dir, embedding_model, chunk_size, token_num):
     pdf_files = [ file for file in os.listdir(doc_dir) if file.endswith(".pdf")]
@@ -49,25 +51,32 @@ def create_db(doc_dir, db_dir, embedding_model, chunk_size, token_num):
     vectorstore.persist()
 
 
-def load_db(db_dir, llm_name, embedding_model, token_num):
+def load_db(db_dir, llm_name, embedding_model, token_num, window_num):
     # LangChain における LLM のセットアップ
     print("LangChain における LLM のセットアップ")
     openai.api_key = os.getenv("OPENAI_API_KEY")
-    llm = ChatOpenAI(temperature=0, model_name=llm_name, max_tokens=token_num)  
+    llm = ChatOpenAI(
+        temperature=0, 
+        model_name=llm_name, 
+        max_tokens=token_num)
 
     embeddings = OpenAIEmbeddings(deployment=embedding_model)
     #embeddings = OpenAIEmbeddings()
     vectorstore = Chroma(persist_directory=db_dir, embedding_function=embeddings)
-    pdf_qa = ConversationalRetrievalChain.from_llm(llm, vectorstore.as_retriever(), return_source_documents=True)
+    memory = ConversationBufferWindowMemory(k=window_num, memory_key="chat_history", return_messages=True)
+    pdf_qa = ConversationalRetrievalChain.from_llm(
+        llm, 
+        vectorstore.as_retriever(), 
+        memory=memory
+        )
     return pdf_qa
 
 def do_chat(pdf_qa):
-    chat_history = []
     while True:
         query = input("> ")
         print("質問：" + query)
 
-        result = pdf_qa({"question": query, "chat_history": chat_history})
+        result = pdf_qa({"question": query})
 
         print("回答："+result["answer"])
 
@@ -76,7 +85,7 @@ if mode == "new":
     pdf_qa = create_db(doc_dir, db_dir, embedding_model, page_chunk_size, max_token_num)
     sys.exit(0)
 else:
-    pdf_qa = load_db(db_dir, llm_name, embedding_model, max_token_num)
+    pdf_qa = load_db(db_dir, llm_name, embedding_model, max_token_num, conversation_window_size)
     do_chat(pdf_qa)
     sys.exit(0)
 
