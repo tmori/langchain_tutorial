@@ -22,6 +22,7 @@ pip3 install openai
 pip3 install chromadb 
 pip3 install tiktoken
 pip3 install pypdf
+pip3 install langchain
 ```
 
 OpenAPIのAPIキーを環境変数として設定してください。
