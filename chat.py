@@ -4,7 +4,8 @@ doc_dir='./documents'
 db_dir='DB'
 llm_name="gpt-3.5-turbo"
 embedding_model='text-embedding-ada-002'
-chank_size = 100
+page_chunk_size = 1024
+max_token_num = 2048
 
 if len(sys.argv) != 2:
     print("ERROR: " + sys.argv[0] + " <new|load>")
@@ -21,7 +22,7 @@ from langchain.chains import ConversationalRetrievalChain
 from langchain.document_loaders import PyPDFLoader
 from langchain.text_splitter import CharacterTextSplitter
 
-def create_db(doc_dir, db_dir, llm_name, embedding_model, chank_size):
+def create_db(doc_dir, db_dir, llm_name, embedding_model, chunk_size, token_num):
     pdf_files = [ file for file in os.listdir(doc_dir) if file.endswith(".pdf")]
 
     pages = []
@@ -32,8 +33,8 @@ def create_db(doc_dir, db_dir, llm_name, embedding_model, chank_size):
         print("PDF ドキュメントの内容を分割する")
         tmp_pages = loader.load_and_split()
         text_splitter = CharacterTextSplitter(
-            separator = "\n\n",  # セパレータ
-            chunk_size = chank_size,  # チャンクの文字数
+            separator = "\n",  # セパレータ
+            chunk_size = chunk_size,  # チャンクの文字数
             chunk_overlap = 0,  # チャンクオーバーラップの文字数
         )
         chanked_pages = text_splitter.split_documents(tmp_pages)
@@ -43,7 +44,7 @@ def create_db(doc_dir, db_dir, llm_name, embedding_model, chank_size):
     # LangChain における LLM のセットアップ
     print("LangChain における LLM のセットアップ")
     openai.api_key = os.getenv("OPENAI_API_KEY")
-    llm = ChatOpenAI(temperature=0, model_name=llm_name, max_tokens=1000)  
+    llm = ChatOpenAI(temperature=0, model_name=llm_name, max_tokens=token_num)  
 
     # 分割したテキストの情報をベクターストアに格納する
     print("分割したテキストの情報をベクターストアに格納する")
@@ -56,11 +57,11 @@ def create_db(doc_dir, db_dir, llm_name, embedding_model, chank_size):
     pdf_qa = ConversationalRetrievalChain.from_llm(llm, vectorstore.as_retriever(), return_source_documents=True)
     return pdf_qa
 
-def load_db(db_dir, llm_name, embedding_model):
+def load_db(db_dir, llm_name, embedding_model, token_num):
     # LangChain における LLM のセットアップ
     print("LangChain における LLM のセットアップ")
     openai.api_key = os.getenv("OPENAI_API_KEY")
-    llm = ChatOpenAI(temperature=0, model_name=llm_name, max_tokens=1000)  
+    llm = ChatOpenAI(temperature=0, model_name=llm_name, max_tokens=token_num)  
 
     embeddings = OpenAIEmbeddings(deployment=embedding_model)
     #embeddings = OpenAIEmbeddings()
@@ -80,10 +81,10 @@ def do_chat(pdf_qa):
 
 
 if mode == "new":
-    pdf_qa = create_db(doc_dir, db_dir, llm_name, embedding_model, chank_size)
+    pdf_qa = create_db(doc_dir, db_dir, llm_name, embedding_model, page_chunk_size, max_token_num)
     sys.exit(0)
 else:
-    pdf_qa = load_db(db_dir, llm_name, embedding_model)
+    pdf_qa = load_db(db_dir, llm_name, embedding_model, max_token_num)
     do_chat(pdf_qa)
     sys.exit(0)
 
