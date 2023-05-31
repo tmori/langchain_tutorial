@@ -23,6 +23,8 @@ pip3 install chromadb
 pip3 install tiktoken
 pip3 install pypdf
 pip3 install langchain
+pip3 install unstructured
+pip3 install tabulate
 ```
 
 OpenAPIのAPIキーを環境変数として設定してください。
