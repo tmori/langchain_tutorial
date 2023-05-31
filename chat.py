@@ -4,7 +4,7 @@ doc_dir='./documents'
 db_dir='DB'
 llm_name="gpt-3.5-turbo"
 embedding_model='text-embedding-ada-002'
-page_chunk_size = 256
+page_chunk_size = 128
 max_token_num = 2048
 conversation_window_size = 3
 conversation_token_num = 512
@@ -23,24 +23,32 @@ from langchain.vectorstores import Chroma
 from langchain.chat_models import ChatOpenAI
 from langchain.chains import ConversationalRetrievalChain
 from langchain.document_loaders import PyPDFLoader
+from langchain.document_loaders import CSVLoader
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.memory import ConversationBufferWindowMemory, ConversationTokenBufferMemory
 
 def create_db(doc_dir, db_dir, embedding_model, chunk_size, token_num):
     pdf_files = [ file for file in os.listdir(doc_dir) if file.endswith(".pdf")]
-
+    csv_files = [ file for file in os.listdir(doc_dir) if file.endswith(".csv")]
+    text_splitter = CharacterTextSplitter(
+        separator = "\n",  # セパレータ
+        chunk_size = chunk_size,  # チャンクの文字数
+        chunk_overlap = 0,  # チャンクオーバーラップの文字数
+    )
+    files = pdf_files + csv_files
     pages = []
-    for pdf_file in pdf_files:
-        print("PDFロード：" + pdf_file)
-        loader = PyPDFLoader(doc_dir + '/' + pdf_file)
-        # PDF ドキュメントの内容を分割する
-        print("PDF ドキュメントの内容を分割する")
+    for file in files:
+        print("ロード：" + file)
+        if ".pdf" in file:
+            loader = PyPDFLoader(doc_dir + '/' + file)
+        elif ".csv" in file:
+            loader = CSVLoader(doc_dir + '/' + file)
+        else:
+            print("未サポートファイル：" + file)
+            continue
+        # ドキュメントの内容を分割する
+        print("ドキュメントの内容を分割する")
         tmp_pages = loader.load_and_split()
-        text_splitter = CharacterTextSplitter(
-            separator = "\n",  # セパレータ
-            chunk_size = chunk_size,  # チャンクの文字数
-            chunk_overlap = 0,  # チャンクオーバーラップの文字数
-        )
         chanked_pages = text_splitter.split_documents(tmp_pages)
         # 連結
         pages = pages + chanked_pages
