@@ -139,11 +139,16 @@ def get_question():
     if query_background == 'exit' or query_background == 'q' or query_background == "quit":
         print("See you again!")
         sys.exit(0)
+    concrete_question = input("Input Concrete Question> ")
+    if query_background == 'exit' or query_background == 'q' or query_background == "quit":
+        print("See you again!")
+        sys.exit(0)
 
-    return "質問：" + query + " 背景：" + query_background
+    return "質問:" + query + " 背景:" + query_background + " 具体的な質問:" + concrete_question
 
 def check_question(pdf_qa, question):
-    query = "「" + question + "」という質問文に対して、回答作成する上で必要な背景情報やより質問を具体化した方が良ければ、ERROR: <理由> という書式で理由を示してください。問題なければ、OKと回答ください"
+    #query = "「" + question + "」という質問文に対して、回答作成する上で必要な背景情報やより質問を具体化した方が良ければ、ERROR: <理由> という書式で理由を示してください。問題なければ、OKと回答ください"
+    query = "For the question '" + question + "', if there is a need for additional background information or further specification to properly answer, please indicate the reason using the format ERROR: <reason>. If there's no issue, please respond with 'OK'."
     print("Q: " + query)
     result = pdf_qa({"question": query})
     print("A: "+result["answer"])
@@ -157,7 +162,8 @@ def do_chat2(db_dir):
         query = get_question()
         if check_question(pdf_qa, query) == False:
             continue
-        first_query = "「" + query + "」という質問文に対して、その質問に回答可能な情報が多いと思われるドキュメントを必ず１個抽出し、以下の書式で出力してください。RESULT: DocumentName"
+        #first_query = "「" + query + "」という質問文に対して、その質問に回答可能な情報が多いと思われるドキュメントを必ず１個抽出し、RESULT: <DocumentName> という形式で回答ください"
+        first_query = "For the question '" + query + "', please identify a document that seems to contain ample information to answer it, and provide the response in the following format: RESULT: <DocumentName>"
         print("Q: " + first_query)
         result = pdf_qa({"question": first_query})
         print("A: "+result["answer"])
