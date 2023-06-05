@@ -94,7 +94,7 @@ def create_db(doc_dir, db_dir, embedding_model, chunk_size):
 
 
 def load_db(db_dir, llm_name, embedding_model, token_num, history_type, num):
-    print("INFO: Setting up LLM")
+    print("INFO: Setting up LLM:" + db_dir)
     openai.api_key = os.getenv("OPENAI_API_KEY")
     llm = ChatOpenAI(
         temperature=0, 
@@ -132,22 +132,31 @@ def do_chat(db_dir):
         print("Q: " + query)
 
         result = pdf_qa({"question": query})
+        print("A: "+result["answer"])
 
 def get_question():
+    ret_query = ""
     query = input("Input Question> ")
     if query == 'exit' or query == 'q' or query == "quit":
         print("See you again!")
         sys.exit(0)
+    if len(query.strip()) == 0:
+        return ""
+    ret_query = "質問:" + query
     query_background = input("Input BackGround> ")
     if query_background == 'exit' or query_background == 'q' or query_background == "quit":
         print("See you again!")
         sys.exit(0)
+    if len(query_background.strip()) > 0:
+        ret_query = ret_query + " 背景:" + query_background
+
     concrete_question = input("Input Concrete Question> ")
     if query_background == 'exit' or query_background == 'q' or query_background == "quit":
         print("See you again!")
         sys.exit(0)
-
-    return "質問:" + query + " 背景:" + query_background + " 具体的な質問:" + concrete_question
+    if len(concrete_question.strip()) > 0:
+        ret_query = ret_query + " 具体的な質問:" + concrete_question
+    return ret_query
 
 def check_question(pdf_qa, question):
     #query = "「" + question + "」という質問文に対して、回答作成する上で必要な背景情報やより質問を具体化した方が良ければ、ERROR: <理由> という書式で理由を示してください。問題なければ、OKと回答ください"
@@ -190,14 +199,33 @@ def append_best_answer(ans_dir, db_name, query, answer):
         save_to_csv(query, answer, file_path)
         _ = create_db(ans_dir, ans_dir + "/DB", embedding_model, page_chunk_size)
 
+def try_best_answer(question):
+    ans_db_path = "answer/DB"
+    if os.path.exists(ans_db_path) == False:
+        return False
+    qa = load_db_with_type(ans_db_path)
+    query = "Please provide the answer, appropriately breaking into new lines, if there is a response to the question corresponding to '" + question + "'. If not found, please indicate the reason using the format ERROR: <reason>."
+    print("Q: " + query)
+    result = qa({"question": query})
+    print("A: "+result["answer"])
+    if "ERROR" in result["answer"]:
+        print("WARNING: NOT FOUND BEST ANSWER")
+        return False
+    print("INFO: FOUND BEST ANSWER")
+    return True
+
 def do_chat2(db_dir):
     global ans_dir
     while True:
         pdf_qa = load_db_with_type(db_dir + "/summary")
         query = get_question()
+        if not query:
+            print("ERROR: Invalid question...")
+            continue
         if check_question(pdf_qa, query) == False:
             continue
-        #first_query = "「" + query + "」という質問文に対して、その質問に回答可能な情報が多いと思われるドキュメントを必ず１個抽出し、RESULT: <DocumentName> という形式で回答ください"
+        if try_best_answer(query) == True:
+            continue
         first_query = "For the question '" + query + "', please identify a document that seems to contain ample information to answer it, and provide the response in the following format: RESULT: <DocumentName>"
         print("Q: " + first_query)
         result = pdf_qa({"question": first_query})
