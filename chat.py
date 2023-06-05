@@ -1,4 +1,5 @@
 import sys
+import re
 
 llm_name="gpt-4"
 embedding_model='text-embedding-ada-002'
@@ -145,6 +146,13 @@ def do_chat2(db_dir):
         input_string=result["answer"]
         tmp = input_string.split(":")
         db_name = tmp[len(tmp) - 1].strip()
+        match = re.search(r"([a-zA-Z0-9_-]+)$", db_name)
+        if match:
+            db_name = match.group(1)
+        else:
+            print("ERROR: can not find best document...")
+            return
+
         print("INFO: selected db_name: "+db_name)
         pdf_qa = load_db_with_type(db_dir + "/" + db_name)
         result = pdf_qa({"question": query})
