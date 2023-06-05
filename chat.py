@@ -130,15 +130,33 @@ def do_chat(db_dir):
 
         result = pdf_qa({"question": query})
 
-        print("A: "+result["answer"])
+def get_question():
+    query = input("Input Question> ")
+    if query == 'exit' or query == 'q' or query == "quit":
+        print("See you again!")
+        sys.exit(0)
+    query_background = input("Input BackGround> ")
+    if query_background == 'exit' or query_background == 'q' or query_background == "quit":
+        print("See you again!")
+        sys.exit(0)
+
+    return "質問：" + query + " 背景：" + query_background
+
+def check_question(pdf_qa, question):
+    query = "「" + question + "」という質問文に対して、回答作成する上で必要な背景情報やより質問を具体化した方が良ければ、ERROR: <理由> という書式で理由を示してください。問題なければ、OKと回答ください"
+    print("Q: " + query)
+    result = pdf_qa({"question": query})
+    print("A: "+result["answer"])
+    if "ERROR" in result["answer"]:
+        return False
+    return True
 
 def do_chat2(db_dir):
     while True:
         pdf_qa = load_db_with_type(db_dir + "/summary")
-        query = input("> ")
-        if query == 'exit' or query == 'q' or query == "quit":
-            print("See you again!")
-            sys.exit(0)
+        query = get_question()
+        if check_question(pdf_qa, query) == False:
+            continue
         first_query = "「" + query + "」という質問文に対して、その質問に回答可能な情報が多いと思われるドキュメントを必ず１個抽出し、以下の書式で出力してください。RESULT: DocumentName"
         print("Q: " + first_query)
         result = pdf_qa({"question": first_query})
@@ -151,8 +169,7 @@ def do_chat2(db_dir):
             db_name = match.group(1)
         else:
             print("ERROR: can not find best document...")
-            return
-
+            continue
         print("INFO: selected db_name: "+db_name)
         pdf_qa = load_db_with_type(db_dir + "/" + db_name)
         result = pdf_qa({"question": query})
