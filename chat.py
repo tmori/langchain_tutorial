@@ -1,5 +1,7 @@
 import sys
 import re
+import csv
+import pandas as pd
 
 llm_name="gpt-4"
 embedding_model='text-embedding-ada-002'
@@ -19,6 +21,7 @@ if (len(sys.argv) == 1) or (len(sys.argv) > 4):
 mode=sys.argv[1]
 db_dir = "DB"
 doc_dir = "documents"
+ans_dir = "answer"
 
 if mode == "chat":
     if len(sys.argv) != 2 and len(sys.argv) != 3:
@@ -52,7 +55,7 @@ from langchain.document_loaders import UnstructuredURLLoader
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.memory import ConversationBufferWindowMemory, ConversationTokenBufferMemory
 
-def create_db(doc_dir, db_dir, embedding_model, chunk_size, token_num):
+def create_db(doc_dir, db_dir, embedding_model, chunk_size):
     pdf_files = [ file for file in os.listdir(doc_dir) if file.endswith(".pdf")]
     csv_files = [ file for file in os.listdir(doc_dir) if file.endswith(".csv")]
     pptx_files = [ file for file in os.listdir(doc_dir) if file.endswith(".pptx")]
@@ -84,7 +87,7 @@ def create_db(doc_dir, db_dir, embedding_model, chunk_size, token_num):
         chanked_pages = text_splitter.split_documents(tmp_pages)
         pages = pages + chanked_pages
 
-    print("INFO: Storing Vector DB")
+    print("INFO: Storing Vector DB:" + db_dir)
     embeddings = OpenAIEmbeddings(deployment=embedding_model)
     vectorstore = Chroma.from_documents(pages, embedding=embeddings, persist_directory=db_dir)
     vectorstore.persist()
@@ -156,7 +159,39 @@ def check_question(pdf_qa, question):
         return False
     return True
 
+
+def check_existing_data(question, filename):
+    if os.path.exists(filename):
+        df = pd.read_csv(filename)
+        if question in df.iloc[:,0].values:
+            return True
+        else:
+            return False
+    else:
+        return False
+
+def save_to_csv(string1, string2, filename):
+    # 文字列から改行コードを除去
+    string1 = string1.replace('\n', '')
+    string2 = string2.replace('\n', '')
+    is_exist = os.path.exists(filename)
+
+    # CSVファイルにデータを書き込む
+    with open(filename, 'a', newline='') as csvfile:
+        writer = csv.writer(csvfile, quoting=csv.QUOTE_ALL)
+        if is_exist == False:
+            writer.writerow(['Question', 'Answer'])  # ヘッダー行
+        writer.writerow([string1, string2])
+
+def append_best_answer(ans_dir, db_name, query, answer):
+    global embedding_model, page_chunk_size
+    file_path = ans_dir + "/" + db_name + ".csv"
+    if check_existing_data(query, file_path) == False:
+        save_to_csv(query, answer, file_path)
+        _ = create_db(ans_dir, ans_dir + "/DB", embedding_model, page_chunk_size)
+
 def do_chat2(db_dir):
+    global ans_dir
     while True:
         pdf_qa = load_db_with_type(db_dir + "/summary")
         query = get_question()
@@ -181,9 +216,10 @@ def do_chat2(db_dir):
         result = pdf_qa({"question": query})
         print("Q: " + query)
         print("A: "+result["answer"])
+        append_best_answer(ans_dir, db_name, query, result["answer"])
 
 if mode == "new":
-    pdf_qa = create_db(doc_dir, db_dir, embedding_model, page_chunk_size, max_token_num)
+    pdf_qa = create_db(doc_dir, db_dir, embedding_model, page_chunk_size)
 else:
     if inference_phase_num == 1:
         do_chat(db_dir)
