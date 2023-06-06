@@ -69,7 +69,7 @@ chroma-collections.parquet  chroma-embeddings.parquet  index
 # 実行方法
 
 ```
-python3 chat.py load
+python3 chat.py chat
 ```
 
 # デモ
