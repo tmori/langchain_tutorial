@@ -105,3 +105,37 @@ $ python3 chat.py load
 質問：C++箱庭コア機能とは何ですか？
 
 回答：C++版箱庭コア機能は、箱庭システムの中核となる機能であり、オレンジ部分が箱庭コア部分であり、青色・緑色部分が箱庭コアを利用しやすくするためのコマンドやプロキシなどで構成されます。具体的には、箱庭マスタ制御、ECU間通信を実現するCAN通信デバイス、箱庭CANモニタ・プロキシ、箱庭時間同期用Athrillデバイスなどが含まれます。詳細はGitHubで公開されています。
+
+# URL sample
+
+```
+export OPENAI_API_KEY=<APIキー>
+```
+
+create vector db for url
+
+```
+python3 chat.py new urls urls/DB
+```
+
+do chat
+
+```
+python3 chat.py chat urls/DB
+```
+
+log:
+```
+DB_DIR =urls/DB
+DOC_DIR=documents
+INFO: Setting up LLM:urls/DB
+```
+
+demo:
+```
+> please summarize this document.
+Q: please summarize this document.
+A: This document provides a tutorial on using LangChain to load and query PDF documents. It requires a Windows 10/11 WSL2 environment, Python3, and an OpenAPI key. To set up, install the necessary components, set the OpenAPI key as an environment variable, and place the desired PDF files in a "documents" directory. Then, create a database using the provided command.
+
+The tutorial demonstrates the use of LangChain with several PDF files related to the TOPPERS project. It provides examples of questions and answers, such as the definition of Athrill, which is a V850 CPU emulator developed for vehicle-less development environments using the TOPPERS/ASP3 kernel. Another example is the explanation of "Hakoniwa," a concept for easily developing autonomous driving systems' components in a miniature environment, aiming to gather global wisdom and create a chemical reaction among non-technical communities. The C++ Hakoniwa core functionality is also discussed, which serves as the central part of the Hakoniwa system and includes various components for communication and control.
+```
