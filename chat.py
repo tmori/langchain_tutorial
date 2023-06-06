@@ -9,7 +9,7 @@ page_chunk_size = 1024
 max_token_num = 4096
 conversation_window_size = 3
 conversation_token_num = 1024
-conversation_history_type = "token" # token or window
+conversation_history_type = "window" # token or window
 inference_phase_num = 1
 #print("arg num=" + str(len(sys.argv)))
 
@@ -82,7 +82,7 @@ def create_db(doc_dir, db_dir, embedding_model, chunk_size):
         else:
             print("WARNING: Not supported document=" + file)
             continue
-        print("INFO: Spliting document=" + file)
+        #print("INFO: Spliting document=" + file)
         tmp_pages = loader.load_and_split()
         chanked_pages = text_splitter.split_documents(tmp_pages)
         pages = pages + chanked_pages
@@ -226,14 +226,14 @@ def do_chat2(db_dir):
             continue
         if try_best_answer(query) == True:
             continue
-        first_query = "For the question '" + query + "', please identify a document that seems to contain ample information to answer it, and provide the response in the following format: RESULT: <DocumentName>"
+        first_query = "For the question '" + query + "', please identify a document that seems to contain ample information to answer it, and provide the response in the following format: RESULT: <DocumentName>, if not found then please indicates the reason."
         print("Q: " + first_query)
         result = pdf_qa({"question": first_query})
         print("A: "+result["answer"])
         input_string=result["answer"]
         tmp = input_string.split(":")
         db_name = tmp[len(tmp) - 1].strip()
-        match = re.search(r"([a-zA-Z0-9_-]+)$", db_name)
+        match = re.search(r"([a-zA-Z0-9_-]+)\)?$", db_name)
         if match:
             db_name = match.group(1)
         else:
