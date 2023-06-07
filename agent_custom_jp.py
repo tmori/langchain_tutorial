@@ -78,28 +78,24 @@ tools = [
     ),
 ]
 
-template = """Complete the objective as best you can. You have access to the following tools:
+template = """最善の方法で目標を達成してください。以下のツールにアクセスできます:
 
 {tools}
 
-Use the following format:
+以下のフォーマットを使用してください:
 
-Question: the input question you must answer
-Thought: you should always think about what to do
-Action: the action to take, should be one of [{tool_names}]
-Action Input: the input to the action
-Observation: the result of the action
-... (this Thought/Action/Action Input/Observation can repeat N times)
-Thought: I now know the final answer
-Final Answer: the final answer to the original input question
+Question: 回答するための入力質問
+Thought: 常に何をすべきか考えるべきです
+Action: 取るべき Action は、[{tool_names}] のいずれかであるべきです
+Action Input: Action への入力
+Observation: Action の結果
+... (Thought/Action/Action Input/Observation を N 回繰り返しできます)
+Thought: 答えがわかりました
+Final Answer: 入力質問に対する答えです
 
-These were previous tasks you completed:
+始めてください!
 
-
-
-Begin!
-
-Question: {input}
+質問: {input}
 {agent_scratchpad}"""
 
 # Set up a prompt template
@@ -179,11 +175,9 @@ while True:
     if q == 'exit' or q == 'q' or q == "quit":
         print("See you again!")
         break
-    #query = translation_en_tool(q)
     query = q
     print("Q: " + query)
     ret_msg = agent_executor.run(query)
-    ret_msg = translation_jp_tool(ret_msg)
     print("A:" + ret_msg)
 
 print(memory.load_memory_variables({}))
