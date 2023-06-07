@@ -13,34 +13,40 @@ conversation_history_type = "window" # token or window
 inference_phase_num = 1
 #print("arg num=" + str(len(sys.argv)))
 
-if (len(sys.argv) == 1) or (len(sys.argv) > 4):
-    print("USAGE: " + sys.argv[0] + " new [<doc_dir> [<db_dir>]]")
-    print("USAGE: " + sys.argv[0] + " chat [<db_dir>]")
-    sys.exit(1)
-
-mode=sys.argv[1]
-db_dir = "DB"
-doc_dir = "documents"
-ans_dir = "answer"
-
-if mode == "chat":
-    if len(sys.argv) != 2 and len(sys.argv) != 3:
+if __name__ == "__main__":
+    if (len(sys.argv) == 1) or (len(sys.argv) > 4):
+        print("USAGE: " + sys.argv[0] + " new [<doc_dir> [<db_dir>]]")
         print("USAGE: " + sys.argv[0] + " chat [<db_dir>]")
         sys.exit(1)
-    if len(sys.argv) == 3:
-        db_dir = sys.argv[2]
-    
 
-if mode == "new":
-    if len(sys.argv) != 2 and len(sys.argv) != 4:
-        print("USAGE: " + sys.argv[0] + " new [<doc_dir> [<db_dir>]]")
-        sys.exit(1)
-    if len(sys.argv) == 4:
-        doc_dir=sys.argv[2]
-        db_dir = sys.argv[3]
+    mode=sys.argv[1]
+    db_dir = "DB"
+    doc_dir = "documents"
+    ans_dir = "answer"
 
-print("DB_DIR =" + db_dir)
-print("DOC_DIR=" + doc_dir)
+    if mode == "chat":
+        if len(sys.argv) != 2 and len(sys.argv) != 3:
+            print("USAGE: " + sys.argv[0] + " chat [<db_dir>]")
+            sys.exit(1)
+        if len(sys.argv) == 3:
+            db_dir = sys.argv[2]
+        
+
+    if mode == "new":
+        if len(sys.argv) != 2 and len(sys.argv) != 4:
+            print("USAGE: " + sys.argv[0] + " new [<doc_dir> [<db_dir>]]")
+            sys.exit(1)
+        if len(sys.argv) == 4:
+            doc_dir=sys.argv[2]
+            db_dir = sys.argv[3]
+    print("DB_DIR =" + db_dir)
+    print("DOC_DIR=" + doc_dir)
+else:
+    mode = "chat"
+    conversation_history_type="window"
+    conversation_window_size=0
+    inference_phase_num=1
+
 
 import os
 import openai
@@ -246,12 +252,13 @@ def do_chat2(db_dir):
         print("A: "+result["answer"])
         append_best_answer(ans_dir, db_name, query, result["answer"])
 
-if mode == "new":
-    pdf_qa = create_db(doc_dir, db_dir, embedding_model, page_chunk_size)
-else:
-    if inference_phase_num == 1:
-        do_chat(db_dir)
+if __name__ == "__main__":
+    if mode == "new":
+        pdf_qa = create_db(doc_dir, db_dir, embedding_model, page_chunk_size)
     else:
-        do_chat2(db_dir)
+        if inference_phase_num == 1:
+            do_chat(db_dir)
+        else:
+            do_chat2(db_dir)
 
-sys.exit(0)
+    sys.exit(0)
