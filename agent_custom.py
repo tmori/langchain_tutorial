@@ -6,11 +6,12 @@ from typing import List, Union
 from langchain.schema import AgentAction, AgentFinish, HumanMessage
 from langchain.tools import Tool
 from langchain.tools.base import ToolException
+from langchain.memory import ConversationBufferMemory
 import re
 import os
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-
+memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
 
 from langchain.callbacks.manager import AsyncCallbackManagerForToolRun, CallbackManagerForToolRun
 def _handle_error(error:ToolException) -> str:
@@ -69,6 +70,8 @@ class CustomPromptTemplate(BaseChatPromptTemplate):
         intermediate_steps = kwargs.pop("intermediate_steps")
         thoughts = ""
         for action, observation in intermediate_steps:
+            print("action.log=" + action.log)
+            print("observation=" + observation)
             thoughts += action.log
             thoughts += f"\nObservation: {observation}\nThought: "
         # Set the agent_scratchpad variable to that value
@@ -78,7 +81,8 @@ class CustomPromptTemplate(BaseChatPromptTemplate):
         # Create a list of tool names for the tools provided
         kwargs["tool_names"] = ", ".join([tool.name for tool in self.tools])
         formatted = self.template.format(**kwargs)
-        return [HumanMessage(content=formatted)]
+        msg = HumanMessage(content=formatted)
+        return [msg]
 
 prompt = CustomPromptTemplate(
     template=template,
@@ -91,6 +95,7 @@ prompt = CustomPromptTemplate(
 class CustomOutputParser(AgentOutputParser):
     
     def parse(self, llm_output: str) -> Union[AgentAction, AgentFinish]:
+        print("LLM_OUTPUT:" + llm_output)
         # Check if agent should finish
         if "Final Answer:" in llm_output:
             return AgentFinish(
@@ -123,5 +128,7 @@ agent = LLMSingleActionAgent(
     stop=["\nObservation:"], 
     allowed_tools=tool_names
 )
-agent_executor = AgentExecutor.from_agent_and_tools(agent=agent, tools=tools, verbose=True)
+agent_executor = AgentExecutor.from_agent_and_tools(agent=agent, tools=tools, memory=memory, verbose=True)
 agent_executor.run("tell me DiCaprio's full name.")
+
+print(memory.load_memory_variables({}))
