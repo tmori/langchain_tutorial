@@ -85,13 +85,14 @@ template = """最善の方法で目標を達成してください。以下のツ
 以下のフォーマットを使用してください:
 
 Question: 回答するための入力質問
-Thought: 常に何をすべきか考えるべきです
+Thought: 常に何をすべきか考えるべきです。適切な情報がない場合は、質問内容を抽象化・横展開し、別の観点で考えてください。
 Action: 取るべき Action は、[{tool_names}] のいずれかであるべきです
 Action Input: Action への入力
 Observation: Action の結果
 ... (Thought/Action/Action Input/Observation を N 回繰り返しできます)
 Thought: 答えがわかりました
 Final Answer: 入力質問に対する答えです
+Unanswerable Question: 質問に答えるための情報が不足しています
 
 始めてください!
 
@@ -143,6 +144,11 @@ class CustomOutputParser(AgentOutputParser):
                 # Return values is generally always a dictionary with a single `output` key
                 # It is not recommended to try anything else at the moment :)
                 return_values={"output": llm_output.split("Final Answer:")[-1].strip()},
+                log=llm_output,
+            )
+        if "Unanswerable Question:" in llm_output:
+            return AgentFinish(
+                return_values={"output": llm_output.split("Unanswerable Question:")[-1].strip()},
                 log=llm_output,
             )
         # Parse out the action and action input
